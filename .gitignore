@@ -1,1 +1,27 @@
+# Rust
+/target/
+**/*.rs.bk
+
+# Environment — keep .env.example, ignore local overrides
+.env
+.env.local
+
+# Diesel
+.diesel_history
+
+# Nix / direnv
+.direnv/
+result
+result-*
+
+# Editor
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project planning (local only)
 .plan/

@@ -13,7 +13,9 @@ microservice-sample/
 │   ├── user-service/   port 3001
 │   ├── book-service/   port 3002
 │   └── review-service/ port 3003
-└── docker-compose.yml  3 Postgres 16 instances (ports 5433/5434/5435)
+├── scripts/
+│   └── init-db.sql     creates users, books, reviews databases on first start
+└── docker-compose.yml  single Postgres 17 instance (port 5432, 3 databases)
 ```
 
 ## Architecture
@@ -35,7 +37,7 @@ See the global DDD rules in `~/.claude/rules/ddd-architecture.md` for the full l
 | ORM | Diesel (sync, compile-time checked) |
 | Async DB pool | deadpool-diesel (`interact` for blocking calls) |
 | Migrations | `diesel_migrations::embed_migrations!` — run on startup |
-| Database | PostgreSQL 16 (one per service) |
+| Database | PostgreSQL 17 (one per service) |
 | IDs | `uuid` v4, wrapped in newtypes from `library-core` |
 | OpenAPI | utoipa + utoipa-axum — spec served at `/api-docs/openapi.json` |
 | Images | Nix + crane — `nix build .#<service>-image`, loaded via `podman load` |
@@ -50,7 +52,7 @@ direnv allow
 # To enter manually without direnv:
 # nix develop
 
-# Start all three Postgres databases
+# Start the Postgres instance (creates users/books/reviews databases on first run)
 podman compose up -d
 
 # Copy env and fill in values (or use defaults from .env.example)

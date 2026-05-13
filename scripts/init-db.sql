@@ -1,0 +1,8 @@
+CREATE USER users WITH PASSWORD 'users';
+CREATE DATABASE users OWNER users;
+
+CREATE USER books WITH PASSWORD 'books';
+CREATE DATABASE books OWNER books;
+
+CREATE USER reviews WITH PASSWORD 'reviews';
+CREATE DATABASE reviews OWNER reviews;

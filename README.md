@@ -16,7 +16,7 @@ This project is intentionally incremental — authentication, inter-service comm
 
 - **Axum** — async HTTP framework
 - **Diesel** — compile-time checked SQL ORM
-- **PostgreSQL 16** — one database per service
+- **PostgreSQL 17** — single instance, three databases (`users`, `books`, `reviews`)
 - **deadpool-diesel** — async connection pool
 - **Embedded migrations** — applied automatically on startup
 - **utoipa + utoipa-axum** — OpenAPI 3 spec auto-generated from handler annotations, served at `/api-docs/openapi.json`
@@ -37,7 +37,7 @@ direnv allow
 # The shell is now loaded whenever you enter this directory.
 # All tools (cargo, diesel_cli, podman-compose, cargo-watch) are available.
 
-# 2. Start all three Postgres databases
+# 2. Start the Postgres instance (creates users/books/reviews databases on first run)
 podman compose up -d
 
 # 3. Configure environment variables
@@ -119,7 +119,9 @@ curl -s localhost:3003/books/<book-id>/reviews | jq
 ```
 microservice-sample/
 ├── Cargo.toml              workspace root
-├── docker-compose.yml      3 × Postgres 16
+├── scripts/
+│   └── init-db.sql         creates users/books/reviews databases on first start
+├── docker-compose.yml      Postgres 17 (port 5432, 3 databases)
 ├── .env.example            DATABASE_URL defaults
 ├── libraries/
 │   └── library-core/      UserId, BookId, ReviewId ID types
