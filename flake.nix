@@ -14,7 +14,13 @@
         craneLib = crane.mkLib pkgs;
 
         commonArgs = {
-          src = craneLib.cleanCargoSource ./.;
+          src = pkgs.lib.cleanSourceWith {
+            src = ./.;
+            filter = path: type:
+              (craneLib.filterCargoSources path type)
+              || (pkgs.lib.hasSuffix ".sql" path);
+            name = "source";
+          };
           strictDeps = true;
           nativeBuildInputs = [ pkgs.pkg-config ];
           buildInputs = [ pkgs.libpq pkgs.openssl ]
@@ -37,18 +43,18 @@
           config.Cmd = [ "/bin/${name}" ];
         };
 
-        userService = mkService "user-service";
-        # bookService  = mkService "book-service";
-        # reviewService = mkService "review-service";
+        userService   = mkService "user-service";
+        bookService   = mkService "book-service";
+        reviewService = mkService "review-service";
       in
       {
         packages = {
-          user-service       = userService;
-          user-service-image = mkImage "user-service" userService;
-          # book-service       = bookService;
-          # book-service-image = mkImage "book-service" bookService;
-          # review-service       = reviewService;
-          # review-service-image = mkImage "review-service" reviewService;
+          user-service         = userService;
+          user-service-image   = mkImage "user-service" userService;
+          book-service         = bookService;
+          book-service-image   = mkImage "book-service" bookService;
+          review-service       = reviewService;
+          review-service-image = mkImage "review-service" reviewService;
         };
 
         devShells.default = pkgs.mkShell {
