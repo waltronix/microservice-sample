@@ -39,7 +39,7 @@ See the global DDD rules in `~/.claude/rules/ddd-architecture.md` for the full l
 | Migrations | `diesel_migrations::embed_migrations!` — run on startup |
 | Database | PostgreSQL 17 (one per service) |
 | IDs | `uuid` v4, wrapped in newtypes from `library-core` |
-| OpenAPI | utoipa + utoipa-axum — spec served at `/api-docs/openapi.json` |
+| OpenAPI | utoipa + utoipa-axum — spec at `/api-docs/openapi.json`, Swagger UI at `/swagger-ui` |
 | Images | Nix + crane — `nix build .#<service>-image`, loaded via `podman load` |
 | Dev shell | `nix develop` — provides rustc, cargo, diesel_cli, cargo-watch (uses host `podman`/`podman-compose`) |
 
