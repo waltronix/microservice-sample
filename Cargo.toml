@@ -4,7 +4,7 @@ members = [
     "libraries/library-core",
     # services are added here as they are scaffolded:
     "services/user-service",
-    # "services/book-service",
+    "services/book-service",
     # "services/review-service",
 ]
 
