@@ -5,6 +5,8 @@ services:
     environment:
       POSTGRES_USER: library
       POSTGRES_PASSWORD: library
+      # Default DB required by postgres image; per-service DBs are created by
+      # init-db.sql (users, books, reviews).
       POSTGRES_DB: library
     ports:
       - "5432:5432"
@@ -12,10 +14,62 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro,z
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U library"]
+      # Verify that pg_isready accepts connections AND all three per-service
+      # databases created by init-db.sql actually exist.  This prevents a race
+      # where a service starts before the init script has finished.
+      test:
+        - "CMD-SHELL"
+        - >-
+          pg_isready -U library &&
+          psql -U library -d library -tAc
+          "SELECT COUNT(*) FROM pg_database WHERE datname IN ('users','books','reviews')"
+          | grep -qx 3
       interval: 5s
       timeout: 5s
       retries: 10
+    restart: unless-stopped
+
+  user-service:
+    image: localhost/user-service:latest
+    container_name: library-user-service
+    environment:
+      USERS_DATABASE_URL: postgres://users:users@postgres:5432/users
+      USERS_BIND_ADDR: 0.0.0.0:3001
+      RUST_LOG: info
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  book-service:
+    image: localhost/book-service:latest
+    container_name: library-book-service
+    environment:
+      BOOKS_DATABASE_URL: postgres://books:books@postgres:5432/books
+      BOOKS_BIND_ADDR: 0.0.0.0:3002
+      RUST_LOG: info
+    ports:
+      - "3002:3002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  review-service:
+    image: localhost/review-service:latest
+    container_name: library-review-service
+    environment:
+      REVIEWS_DATABASE_URL: postgres://reviews:reviews@postgres:5432/reviews
+      REVIEWS_BIND_ADDR: 0.0.0.0:3003
+      RUST_LOG: info
+    ports:
+      - "3003:3003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   postgres-data:

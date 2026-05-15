@@ -19,15 +19,15 @@ This project is intentionally incremental — authentication, inter-service comm
 - **PostgreSQL 17** — single instance, three databases (`users`, `books`, `reviews`)
 - **deadpool-diesel** — async connection pool
 - **Embedded migrations** — applied automatically on startup
-- **utoipa + utoipa-axum** — OpenAPI 3 spec auto-generated from handler annotations, served at `/api-docs/openapi.json`
+- **utoipa + utoipa-axum + utoipa-swagger-ui** — OpenAPI 3 spec auto-generated from handler annotations (served at `/api-docs/openapi.json`) with an interactive Swagger UI at `/swagger-ui`
 
 ## Prerequisites
 
-- [Nix](https://nixos.org/download) with flakes enabled — provides all other tools
+- [Nix](https://nixos.org/download) with flakes enabled — provides Rust, `diesel_cli`, and `cargo-watch`
 - [direnv](https://direnv.net) — auto-loads the dev shell on `cd` into the project
-- Podman (for running containers)
+- `podman` and `podman-compose` — installed on the host (the flake intentionally does **not** ship them; on a NixOS-free distro use your package manager, e.g. `dnf install podman podman-compose` on Fedora)
 
-Without Nix, you'll need Rust stable, podman-compose, and `diesel_cli` (`cargo install diesel_cli --no-default-features --features postgres`) installed manually.
+Without Nix, you'll need Rust stable and `diesel_cli` (`cargo install diesel_cli --no-default-features --features postgres`) installed manually, in addition to podman.
 
 ## Quickstart
 
@@ -35,7 +35,8 @@ Without Nix, you'll need Rust stable, podman-compose, and `diesel_cli` (`cargo i
 # 1. Allow direnv to activate the dev shell automatically
 direnv allow
 # The shell is now loaded whenever you enter this directory.
-# All tools (cargo, diesel_cli, podman-compose, cargo-watch) are available.
+# Nix-provided tools: cargo, rustfmt, clippy, diesel_cli, cargo-watch, cargo-nextest.
+# podman / podman-compose come from your host system.
 
 # 2. Start the Postgres instance (creates users/books/reviews databases on first run)
 podman compose up -d
@@ -55,19 +56,28 @@ cargo run -p review-service
 Images are built reproducibly with Nix and crane — no Dockerfile required.
 
 ```bash
-# Build a service image (produces ./result, a tarball)
-nix build .#user-service-image
-nix build .#book-service-image
-nix build .#review-service-image
+# Build all images and load them into podman in one step
+./scripts/build-images.sh
 
-# Load and run
+# Or build a single image manually
+nix build .#user-service-image
 podman load < result
-podman run --env-file .env user-service
 ```
 
 Images use a distroless base — no shell, minimal attack surface.
 
+After building, start the full stack with:
+
+```bash
+podman compose up -d
+```
+
 ## API Reference
+
+Every service exposes:
+
+- `GET /api-docs/openapi.json` — raw OpenAPI 3 spec
+- `GET /swagger-ui` — interactive Swagger UI to try each endpoint from the browser
 
 ### user-service — `localhost:3001`
 
@@ -155,9 +165,12 @@ diesel print-schema         # regenerate src/infrastructure/database/schema.rs
 
 ## Environment variables
 
-See `.env.example` for all variables. Each service reads:
+Each service reads its own service-prefixed variables from the environment (or a `.env` file in the working directory). Defaults are in [`.env.example`](.env.example).
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DATABASE_URL` | see `.env.example` | Postgres connection string |
-| `BIND_ADDR` | `0.0.0.0:300x` | Address the HTTP server binds to |
+| Service | Database URL | Bind address |
+|---------|--------------|--------------|
+| `user-service` | `USERS_DATABASE_URL` | `USERS_BIND_ADDR` |
+| `book-service` | `BOOKS_DATABASE_URL` | `BOOKS_BIND_ADDR` |
+| `review-service` | `REVIEWS_DATABASE_URL` | `REVIEWS_BIND_ADDR` |
+
+`RUST_LOG` can be set to control tracing output (defaults to `info`).
