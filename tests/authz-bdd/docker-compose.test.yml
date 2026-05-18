@@ -1,0 +1,98 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: library
+      POSTGRES_PASSWORD: library
+      POSTGRES_DB: library
+    volumes:
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro,z
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - >-
+          pg_isready -U library &&
+          psql -U library -d library -tAc
+          "SELECT COUNT(*) FROM pg_database WHERE datname IN ('users','books','reviews')"
+          | grep -qx 3
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+  openfga-migrate:
+    image: openfga/openfga:latest
+    command: migrate
+    environment:
+      OPENFGA_DATASTORE_ENGINE: postgres
+      OPENFGA_DATASTORE_URI: postgres://library:library@postgres:5432/library
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  openfga:
+    image: openfga/openfga:latest
+    command: run
+    environment:
+      OPENFGA_DATASTORE_ENGINE: postgres
+      OPENFGA_DATASTORE_URI: postgres://library:library@postgres:5432/library
+      OPENFGA_PLAYGROUND_ENABLED: "false"
+    ports:
+      - "8080"
+    depends_on:
+      openfga-migrate:
+        condition: service_completed_successfully
+
+  # Services read OPENFGA_STORE_ID and OPENFGA_MODEL_ID from openfga.env,
+  # written by the test binary after provisioning OpenFGA. The test calls
+  # `docker-compose up -d openfga` first, then provisions, then calls
+  # `docker-compose up -d` again to start these services.
+  user-service:
+    image: localhost/user-service:latest
+    environment:
+      USERS_DATABASE_URL: postgres://users:users@postgres:5432/users
+      USERS_BIND_ADDR: 0.0.0.0:3001
+      OPENFGA_URL: http://openfga:8080
+      RUST_LOG: info
+    env_file:
+      - openfga.env
+    ports:
+      - "3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      openfga:
+        condition: service_started
+
+  book-service:
+    image: localhost/book-service:latest
+    environment:
+      BOOKS_DATABASE_URL: postgres://books:books@postgres:5432/books
+      BOOKS_BIND_ADDR: 0.0.0.0:3002
+      OPENFGA_URL: http://openfga:8080
+      RUST_LOG: info
+    env_file:
+      - openfga.env
+    ports:
+      - "3002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      openfga:
+        condition: service_started
+
+  review-service:
+    image: localhost/review-service:latest
+    environment:
+      REVIEWS_DATABASE_URL: postgres://reviews:reviews@postgres:5432/reviews
+      REVIEWS_BIND_ADDR: 0.0.0.0:3003
+      OPENFGA_URL: http://openfga:8080
+      RUST_LOG: info
+    env_file:
+      - openfga.env
+    ports:
+      - "3003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      openfga:
+        condition: service_started

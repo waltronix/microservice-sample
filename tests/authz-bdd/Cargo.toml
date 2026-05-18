@@ -1,0 +1,17 @@
+[package]
+name = "authz-bdd"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dev-dependencies]
+cucumber = "0.21"
+tokio = { workspace = true }
+reqwest = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+
+[[test]]
+name = "authz_bdd"
+path = "tests/authz_bdd.rs"
+harness = false
