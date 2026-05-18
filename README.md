@@ -72,6 +72,87 @@ After building, start the full stack with:
 podman compose up -d
 ```
 
+## Authorization
+
+Each service enforces authorization via the `authz` library crate (`libraries/authz`). Two backends are supported and selected at runtime via the `AUTHZ_BACKEND` environment variable.
+
+### Backends
+
+| Backend | `AUTHZ_BACKEND` | Policy location |
+|---------|-----------------|-----------------|
+| [OpenFGA](https://openfga.dev) | `openfga` (default) | `libraries/authz/fga/model.fga` |
+| [OPA](https://www.openpolicyagent.org) | `opa` | `libraries/authz/opa/library.rego` |
+
+### Additional environment variables
+
+**OpenFGA** (default):
+
+| Variable | Description |
+|----------|-------------|
+| `OPENFGA_URL` | OpenFGA server URL, e.g. `http://localhost:8080` |
+| `OPENFGA_STORE_ID` | Store ID created during provisioning |
+| `OPENFGA_MODEL_ID` | Authorization model ID written to the store |
+
+**OPA**:
+
+| Variable | Description |
+|----------|-------------|
+| `OPA_URL` | OPA server URL, e.g. `http://localhost:8181` |
+
+### Running locally with OpenFGA
+
+```bash
+# Start OpenFGA (and Postgres) via the dev compose file
+podman compose -f tests/authz-bdd/docker-compose.test.yml up -d postgres openfga-migrate openfga
+
+# Provision a store and write the model
+fga store create --api-url http://localhost:8080 --name dev
+fga model write --api-url http://localhost:8080 --store-id <store-id> \
+    --file libraries/authz/fga/model.fga
+
+# Set env vars and run a service
+AUTHZ_BACKEND=openfga \
+OPENFGA_URL=http://localhost:8080 \
+OPENFGA_STORE_ID=<store-id> \
+OPENFGA_MODEL_ID=<model-id> \
+cargo run -p user-service
+```
+
+### Running locally with OPA
+
+```bash
+# Start OPA (and Postgres) via the OPA compose file
+podman compose -f tests/authz-bdd/docker-compose.opa.yml up -d postgres opa
+
+# Load the Rego policy
+curl -X PUT http://localhost:8181/v1/policies/library \
+    -H 'Content-Type: text/plain' \
+    --data-binary @libraries/authz/opa/library.rego
+
+# Run a service
+AUTHZ_BACKEND=opa \
+OPA_URL=http://localhost:8181 \
+cargo run -p user-service
+```
+
+### Behaviour-driven tests
+
+End-to-end BDD tests live in `tests/authz-bdd`. They spin up the full stack (services + backend) via Docker Compose, run Cucumber scenarios, and tear down on exit.
+
+```bash
+# Run against OpenFGA (default)
+cargo test -p authz-bdd
+
+# Run against OPA
+AUTHZ_BACKEND=opa cargo test -p authz-bdd
+```
+
+The tests require pre-built service images. Build them first:
+
+```bash
+./scripts/build-images.sh
+```
+
 ## API Reference
 
 Every service exposes:

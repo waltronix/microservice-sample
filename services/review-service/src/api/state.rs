@@ -2,27 +2,24 @@
 
 use std::sync::Arc;
 
-use authz::{HasAuthz, OpenFgaClient};
+use authz::{AuthzBackend, HasAuthz};
 
 use crate::domain::ReviewRepository;
 
 #[derive(Clone)]
 pub struct AppState {
     pub review_repository: Arc<dyn ReviewRepository>,
-    pub authz: Arc<OpenFgaClient>,
+    pub authz: Arc<dyn AuthzBackend>,
 }
 
 impl AppState {
-    pub fn new(review_repository: Arc<dyn ReviewRepository>, authz: Arc<OpenFgaClient>) -> Self {
-        Self {
-            review_repository,
-            authz,
-        }
+    pub fn new(review_repository: Arc<dyn ReviewRepository>, authz: Arc<dyn AuthzBackend>) -> Self {
+        Self { review_repository, authz }
     }
 }
 
 impl HasAuthz for AppState {
-    fn authz(&self) -> &Arc<OpenFgaClient> {
+    fn authz(&self) -> &Arc<dyn AuthzBackend> {
         &self.authz
     }
 }

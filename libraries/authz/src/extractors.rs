@@ -18,14 +18,14 @@ use library_core::{BookId, ReviewId, UserId};
 use serde_json::json;
 use uuid::Uuid;
 
-use crate::client::{AuthzError, OpenFgaClient};
+use crate::backend::{AuthzBackend, AuthzError};
 
 // ---------------------------------------------------------------------------
 // HasAuthz — implemented by each service's AppState
 // ---------------------------------------------------------------------------
 
 pub trait HasAuthz: Clone + Send + Sync + 'static {
-    fn authz(&self) -> &Arc<OpenFgaClient>;
+    fn authz(&self) -> &Arc<dyn AuthzBackend>;
 }
 
 // ---------------------------------------------------------------------------

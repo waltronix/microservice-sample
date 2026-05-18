@@ -77,6 +77,7 @@
             pkgs.cargo-watch
             pkgs.cargo-nextest
             pkgs.openfga-cli
+            pkgs.open-policy-agent
             # docker-compose CLI (v2) — the e2e test harness calls it directly.
             # Works against the rootless Podman socket via DOCKER_HOST.
             pkgs.docker-compose

@@ -6,9 +6,11 @@ use std::env;
 pub struct Config {
     pub database_url: String,
     pub bind_addr: String,
-    pub openfga_url: String,
-    pub openfga_store_id: String,
-    pub openfga_model_id: String,
+    /// Base URL of the active authorization backend (OpenFGA or OPA).
+    pub authz_url: String,
+    /// Only required when `AUTHZ_BACKEND=openfga` (the default).
+    pub openfga_store_id: Option<String>,
+    pub openfga_model_id: Option<String>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -20,20 +22,28 @@ pub enum ConfigError {
 impl Config {
     pub fn from_env() -> Result<Self, ConfigError> {
         let _ = dotenvy::dotenv();
-        let database_url = env::var("USERS_DATABASE_URL")
-            .map_err(|_| ConfigError::MissingVar("USERS_DATABASE_URL"))?;
-        let bind_addr =
-            env::var("USERS_BIND_ADDR").map_err(|_| ConfigError::MissingVar("USERS_BIND_ADDR"))?;
-        let openfga_url = env::var("OPENFGA_URL")
-            .map_err(|_| ConfigError::MissingVar("OPENFGA_URL"))?;
-        let openfga_store_id = env::var("OPENFGA_STORE_ID")
-            .map_err(|_| ConfigError::MissingVar("OPENFGA_STORE_ID"))?;
-        let openfga_model_id = env::var("OPENFGA_MODEL_ID")
-            .map_err(|_| ConfigError::MissingVar("OPENFGA_MODEL_ID"))?;
+
+        let backend = env::var("AUTHZ_BACKEND").unwrap_or_else(|_| "openfga".into());
+
+        let (authz_url, openfga_store_id, openfga_model_id) = if backend == "opa" {
+            let url = env::var("OPA_URL").map_err(|_| ConfigError::MissingVar("OPA_URL"))?;
+            (url, None, None)
+        } else {
+            let url = env::var("OPENFGA_URL")
+                .map_err(|_| ConfigError::MissingVar("OPENFGA_URL"))?;
+            let store_id = env::var("OPENFGA_STORE_ID")
+                .map_err(|_| ConfigError::MissingVar("OPENFGA_STORE_ID"))?;
+            let model_id = env::var("OPENFGA_MODEL_ID")
+                .map_err(|_| ConfigError::MissingVar("OPENFGA_MODEL_ID"))?;
+            (url, Some(store_id), Some(model_id))
+        };
+
         Ok(Self {
-            database_url,
-            bind_addr,
-            openfga_url,
+            database_url: env::var("USERS_DATABASE_URL")
+                .map_err(|_| ConfigError::MissingVar("USERS_DATABASE_URL"))?,
+            bind_addr: env::var("USERS_BIND_ADDR")
+                .map_err(|_| ConfigError::MissingVar("USERS_BIND_ADDR"))?,
+            authz_url,
             openfga_store_id,
             openfga_model_id,
         })

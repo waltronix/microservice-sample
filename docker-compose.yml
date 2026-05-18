@@ -103,5 +103,17 @@ services:
         condition: service_started
     restart: unless-stopped
 
+  # OPA runs in server mode with no persistent state; policy and data are
+  # loaded at runtime via the REST API (see scripts/init-openfga.sh for the
+  # equivalent OpenFGA bootstrap — OPA needs no separate init for the policy
+  # itself, since services push tuples on write).
+  opa:
+    image: openpolicyagent/opa:latest
+    container_name: library-opa
+    command: ["run", "--server", "--addr", "0.0.0.0:8181"]
+    ports:
+      - "8181:8181"
+    restart: unless-stopped
+
 volumes:
   postgres-data:

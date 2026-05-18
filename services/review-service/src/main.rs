@@ -2,7 +2,6 @@
 
 use std::sync::Arc;
 
-use authz::OpenFgaClient;
 use tracing_subscriber::EnvFilter;
 
 use review_service::api::{self, AppState};
@@ -24,11 +23,16 @@ async fn main() -> anyhow::Result<()> {
     database::migrate::run(&pool).await?;
 
     let repository = Arc::new(PgReviewRepository::new(pool));
-    let authz = Arc::new(OpenFgaClient::new(
-        config.openfga_url,
+    let authz: Arc<dyn authz::AuthzBackend> = match (
         config.openfga_store_id,
         config.openfga_model_id,
-    ));
+    ) {
+        (Some(store_id), Some(model_id)) => {
+            Arc::new(authz::OpenFgaClient::new(config.authz_url, store_id, model_id))
+        }
+        _ => Arc::new(authz::OpaClient::new(config.authz_url)),
+    };
+
     let state = AppState::new(repository, authz);
     let router = api::router(state);
 

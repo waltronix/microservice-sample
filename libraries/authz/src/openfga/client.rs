@@ -1,14 +1,8 @@
+use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 
-#[derive(Debug, Error)]
-pub enum AuthzError {
-    #[error("forbidden")]
-    Forbidden,
-    #[error("authorization service error: {0}")]
-    Infrastructure(String),
-}
+use crate::backend::{AuthzBackend, AuthzError};
 
 #[derive(Clone, Debug)]
 pub struct OpenFgaClient {
@@ -145,5 +139,20 @@ impl OpenFgaClient {
         } else {
             Err(AuthzError::Forbidden)
         }
+    }
+}
+
+#[async_trait]
+impl AuthzBackend for OpenFgaClient {
+    async fn check(&self, user: &str, relation: &str, object: &str) -> Result<bool, AuthzError> {
+        self.check(user, relation, object).await
+    }
+
+    async fn write_tuple(&self, user: &str, relation: &str, object: &str) -> Result<(), AuthzError> {
+        self.write_tuple(user, relation, object).await
+    }
+
+    async fn delete_tuple(&self, user: &str, relation: &str, object: &str) -> Result<(), AuthzError> {
+        self.delete_tuple(user, relation, object).await
     }
 }
