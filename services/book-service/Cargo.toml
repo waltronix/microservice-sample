@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 library-core = { path = "../../libraries/library-core" }
+authz = { path = "../../libraries/authz" }
 tokio = { workspace = true }
 axum = { workspace = true }
 serde = { workspace = true }

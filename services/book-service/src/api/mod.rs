@@ -5,6 +5,8 @@ pub mod handlers;
 pub mod openapi;
 pub mod state;
 
+use axum::middleware;
+use authz::require_caller_id;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -21,8 +23,10 @@ pub fn router(state: AppState) -> axum::Router {
             handlers::books::list_books
         ))
         .routes(routes!(handlers::books::get_book, handlers::books::delete_book))
+        .routes(routes!(handlers::books::grant_book_access))
         .with_state(state)
         .split_for_parts();
 
-    router.merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", api))
+    let protected = router.layer(middleware::from_fn(require_caller_id));
+    protected.merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", api))
 }

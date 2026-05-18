@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use diesel::prelude::*;
 use diesel::result::{DatabaseErrorKind, Error as DieselError};
 
-use crate::domain::{self, BookId, Review, ReviewRepository};
+use crate::domain::{self, BookId, Review, ReviewId, ReviewRepository};
 use crate::infrastructure::database::models::ReviewRow;
 use crate::infrastructure::database::schema::reviews;
 use crate::infrastructure::database::Pool;
@@ -62,6 +62,19 @@ impl ReviewRepository for PgReviewRepository {
         .await
     }
 
+    async fn find_by_id(&self, id: ReviewId) -> Result<Review, domain::Error> {
+        let uuid = id.into_uuid();
+        let row = self
+            .interact(move |conn| {
+                reviews::table
+                    .find(uuid)
+                    .select(ReviewRow::as_select())
+                    .first::<ReviewRow>(conn)
+            })
+            .await?;
+        Review::try_from(row)
+    }
+
     async fn list_by_book(&self, book_id: BookId) -> Result<Vec<Review>, domain::Error> {
         let uuid = book_id.into_uuid();
         let rows = self
@@ -74,5 +87,18 @@ impl ReviewRepository for PgReviewRepository {
             })
             .await?;
         rows.into_iter().map(Review::try_from).collect()
+    }
+
+    async fn delete(&self, id: ReviewId) -> Result<(), domain::Error> {
+        let uuid = id.into_uuid();
+        self.interact(move |conn| {
+            let count = diesel::delete(reviews::table.find(uuid)).execute(conn)?;
+            if count == 0 {
+                Err(DieselError::NotFound)
+            } else {
+                Ok(())
+            }
+        })
+        .await
     }
 }

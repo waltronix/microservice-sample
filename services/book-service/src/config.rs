@@ -6,6 +6,9 @@ use std::env;
 pub struct Config {
     pub database_url: String,
     pub bind_addr: String,
+    pub openfga_url: String,
+    pub openfga_store_id: String,
+    pub openfga_model_id: String,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -21,9 +24,18 @@ impl Config {
             .map_err(|_| ConfigError::MissingVar("BOOKS_DATABASE_URL"))?;
         let bind_addr =
             env::var("BOOKS_BIND_ADDR").map_err(|_| ConfigError::MissingVar("BOOKS_BIND_ADDR"))?;
+        let openfga_url = env::var("OPENFGA_URL")
+            .map_err(|_| ConfigError::MissingVar("OPENFGA_URL"))?;
+        let openfga_store_id = env::var("OPENFGA_STORE_ID")
+            .map_err(|_| ConfigError::MissingVar("OPENFGA_STORE_ID"))?;
+        let openfga_model_id = env::var("OPENFGA_MODEL_ID")
+            .map_err(|_| ConfigError::MissingVar("OPENFGA_MODEL_ID"))?;
         Ok(Self {
             database_url,
             bind_addr,
+            openfga_url,
+            openfga_store_id,
+            openfga_model_id,
         })
     }
 }

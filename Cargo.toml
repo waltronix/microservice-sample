@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "libraries/library-core",
+    "libraries/authz",
     # services are added here as they are scaffolded:
     "services/user-service",
     "services/book-service",
@@ -15,7 +16,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "1"
 anyhow = "1"
-uuid = { version = "1", features = ["v4", "serde"] }
+uuid = { version = "1", features = ["v4", "v5", "serde"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 diesel = { version = "2", features = ["postgres", "uuid", "chrono", "r2d2"] }
@@ -27,3 +28,4 @@ utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
 utoipa-axum = "0.1"
 utoipa-swagger-ui = { version = "8", features = ["axum", "vendored"] }
 async-trait = "0.1"
+reqwest = { version = "0.12", features = ["json"] }

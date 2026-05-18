@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:17
+    image: postgres:17-alpine
     container_name: library-postgres
     environment:
       POSTGRES_USER: library
@@ -29,18 +29,40 @@ services:
       retries: 10
     restart: unless-stopped
 
+  openfga:
+    image: openfga/openfga:latest
+    container_name: library-openfga
+    command: run
+    environment:
+      OPENFGA_DATASTORE_ENGINE: postgres
+      OPENFGA_DATASTORE_URI: postgres://library:library@postgres:5432/library
+      OPENFGA_PLAYGROUND_ENABLED: "true"
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
   user-service:
     image: localhost/user-service:latest
     container_name: library-user-service
     environment:
       USERS_DATABASE_URL: postgres://users:users@postgres:5432/users
       USERS_BIND_ADDR: 0.0.0.0:3001
+      OPENFGA_URL: http://openfga:8080
+      OPENFGA_STORE_ID: ${OPENFGA_STORE_ID}
+      OPENFGA_MODEL_ID: ${OPENFGA_MODEL_ID}
       RUST_LOG: info
     ports:
       - "3001:3001"
     depends_on:
       postgres:
         condition: service_healthy
+      openfga:
+        condition: service_started
     restart: unless-stopped
 
   book-service:
@@ -49,12 +71,17 @@ services:
     environment:
       BOOKS_DATABASE_URL: postgres://books:books@postgres:5432/books
       BOOKS_BIND_ADDR: 0.0.0.0:3002
+      OPENFGA_URL: http://openfga:8080
+      OPENFGA_STORE_ID: ${OPENFGA_STORE_ID}
+      OPENFGA_MODEL_ID: ${OPENFGA_MODEL_ID}
       RUST_LOG: info
     ports:
       - "3002:3002"
     depends_on:
       postgres:
         condition: service_healthy
+      openfga:
+        condition: service_started
     restart: unless-stopped
 
   review-service:
@@ -63,12 +90,17 @@ services:
     environment:
       REVIEWS_DATABASE_URL: postgres://reviews:reviews@postgres:5432/reviews
       REVIEWS_BIND_ADDR: 0.0.0.0:3003
+      OPENFGA_URL: http://openfga:8080
+      OPENFGA_STORE_ID: ${OPENFGA_STORE_ID}
+      OPENFGA_MODEL_ID: ${OPENFGA_MODEL_ID}
       RUST_LOG: info
     ports:
       - "3003:3003"
     depends_on:
       postgres:
         condition: service_healthy
+      openfga:
+        condition: service_started
     restart: unless-stopped
 
 volumes:

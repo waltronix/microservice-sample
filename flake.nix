@@ -28,7 +28,15 @@
           PKG_CONFIG_PATH = "${pkgs.libpq}/lib/pkgconfig:${pkgs.openssl.dev}/lib/pkgconfig";
         };
 
-        cargoArtifacts = craneLib.buildDepsOnly commonArgs;
+        # Build deps for all workspace members except the e2e test crate.
+        # authz-bdd has dev-only deps (testcontainers) that don't belong in
+        # service images; --exclude keeps it out of the dep compilation without
+        # removing it from the workspace or the lock file.
+        cargoArtifacts = craneLib.buildDepsOnly (commonArgs // {
+          pname = "library-services";
+          version = "0.0.1";
+          cargoExtraArgs = "--exclude authz-bdd --workspace";
+        });
 
         mkService = name: craneLib.buildPackage (commonArgs // {
           inherit cargoArtifacts;
@@ -68,10 +76,19 @@
             pkgs.diesel-cli
             pkgs.cargo-watch
             pkgs.cargo-nextest
+            pkgs.openfga-cli
+            # docker-compose CLI (v2) — the e2e test harness calls it directly.
+            # Works against the rootless Podman socket via DOCKER_HOST.
+            pkgs.docker-compose
           ];
           PKG_CONFIG_PATH = "${pkgs.libpq}/lib/pkgconfig:${pkgs.openssl.dev}/lib/pkgconfig";
           LIBPQ_DIR = "${pkgs.libpq}";
-          shellHook = "echo 'microservice-sample dev shell'";
+          # Point testcontainers (and any other Docker-compatible tooling) at the
+          # rootless Podman socket. Evaluated at shell startup so $UID is correct.
+          shellHook = ''
+            export DOCKER_HOST="unix:///run/user/$UID/podman/podman.sock"
+            echo 'microservice-sample dev shell'
+          '';
         };
       });
 }
